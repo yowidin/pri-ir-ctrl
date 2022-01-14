@@ -1,7 +1,7 @@
 #include <ir/server.h>
 
-#include <iostream>
 #include <cstddef>
+#include <iostream>
 
 #include <pigpio.h>
 
@@ -9,6 +9,7 @@ static const int BUTTON_INPUT_PIN = 23;
 static const int BUTTON_LED_PIN = 25;
 static const int IR_SENDER_PIN = 7;
 static const std::uint32_t POWER_BUTTON = 0x81387;
+static const std::uint16_t LISTEN_PORT = 80;
 
 namespace {
 
@@ -24,21 +25,21 @@ struct gpio_setup {
 
 } // namespace
 
-
-void main_unsafe() {
+void main_unsafe(ir::server::options opts) {
    static gpio_setup s_gpio_setup;
 
-   ir::server server{ir::server::options{.ir_pin = IR_SENDER_PIN,
-                                         .button_pin = BUTTON_INPUT_PIN,
-                                         .led_pin = BUTTON_LED_PIN,
-                                         .button_code = POWER_BUTTON}};
-
+   ir::server server{opts};
    server.run();
 }
 
-int main() {
+int main(int argc, char **argv) {
    try {
-      main_unsafe();
+      auto opts = ir::server::options::load(argc, argv);
+      if (!opts) {
+         return EXIT_FAILURE;
+      }
+
+      main_unsafe(opts.value());
       return EXIT_SUCCESS;
    } catch (const std::exception &e) {
       std::cerr << e.what() << std::endl;

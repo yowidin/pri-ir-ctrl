@@ -13,6 +13,7 @@
 #include <ir/wave.h>
 #include <ir/led.h>
 #include <ir/button.h>
+#include <ir/util.h>
 
 #include <boost/asio.hpp>
 
@@ -29,6 +30,9 @@ public:
       int button_pin;
       int led_pin;
       code_t button_code;
+      std::uint16_t listen_port;
+
+      static result_t<options> load(int argc, char **argv);
    };
 
 public:

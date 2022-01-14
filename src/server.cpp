@@ -154,6 +154,55 @@ private:
 
 } // namespace
 
+////////////////////////////////////////////////////////////////////////////////
+/// Class: server::options
+////////////////////////////////////////////////////////////////////////////////
+result_t<server::options> server::options::load(int argc, char **argv) {
+   namespace po = boost::program_options;
+
+   po::options_description general("Raspberry Pi IR controller");
+   general.add_options()("help,h", "Show help");
+
+   po::options_description all;
+
+   all.add_options()
+      ("ir-pin", po::value<int>()->default_value(7), "IR sender-LED pin")
+      ("button-pin", po::value<int>()->default_value(23), "Input button pin")
+      ("led-pin", po::value<int>()->default_value(25), "LED button pin")
+      ("button-code", po::value<std::uint32_t>()->default_value(0x81387), "IR code associated with a button press")
+      ("listen-port", po::value<std::uint16_t>()->default_value(80), "HTTP-Server listen port");
+
+   all.add(general);
+
+   try {
+      po::variables_map vm;
+      po::store(po::parse_command_line(argc, argv, all), vm);
+
+      if (vm.count("help")) {
+         std::cout << all << "\n";
+         return std::errc::interrupted;
+      }
+
+      po::notify(vm);
+
+      auto ir_pin = vm["ir-pin"].as<int>();
+      auto button_pin = vm["button-pin"].as<int>();
+      auto led_pin = vm["led-pin"].as<int>();
+      auto button_code = vm["button-code"].as<std::uint32_t>();
+      auto listen_port = vm["listen-port"].as<std::uint16_t>();
+
+      return options {ir_pin, button_pin, led_pin, button_code, listen_port};
+
+   } catch (std::exception const &e) {
+      std::cerr << "Error: " << e.what() << std::endl;
+      std::cerr << all << std::endl;
+      return std::errc::invalid_argument;
+   }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+/// Class: server
+////////////////////////////////////////////////////////////////////////////////
 server::server(const options &options)
    : options_{options}
    , button_{options_.button_pin, [this] { handle_button_press(); }}
@@ -165,7 +214,7 @@ server::server(const options &options)
 }
 
 void server::run() {
-   tcp::acceptor acc{io_, {tcp::v4(), 80}};
+   tcp::acceptor acc{io_, {tcp::v4(), options_.listen_port}};
    tcp::socket sock{io_};
 
    // Handle signals
